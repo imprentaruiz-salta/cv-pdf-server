@@ -1,5 +1,6 @@
 flask==3.0.3
 flask-cors==4.0.0
 weasyprint==60.2
+pydyf==0.8.0
 requests==2.32.3
 gunicorn==22.0.0
