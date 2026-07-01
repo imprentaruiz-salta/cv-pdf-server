@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from weasyprint import HTML, CSS
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", static_url_path="/static")
 CORS(app)
 
 WPP_API   = os.environ.get("WPP_API_URL", "")
@@ -222,6 +222,15 @@ body {{ font-family: Arial, sans-serif; background:#fff; color:#222; }}
 </div>
 </body>
 </html>"""
+
+
+@app.route("/")
+def index():
+    return send_file("static/index.html")
+
+@app.route("/cv")
+def cv():
+    return send_file("static/index.html")
 
 
 @app.route("/ping")
