@@ -1,7 +1,14 @@
-import os, io, json, requests
+import os, io, json, requests, base64
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-from weasyprint import HTML, CSS
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.platypus import Paragraph
+from reportlab.lib.enums import TA_LEFT
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 CORS(app)
@@ -11,217 +18,281 @@ WPP_TOKEN = os.environ.get("WPP_TOKEN", "")
 IMPRENTA_JID = os.environ.get("IMPRENTA_JID", "5493876328815@s.whatsapp.net")
 
 COLOR_MAP = {
-    "negro":        "#2c2c2c",
-    "azulmarino":   "#1a237e",
-    "azul":         "#1565c0",
-    "verdepetroleo":"#006064",
-    "verde":        "#2e7d32",
-    "violeta":      "#6a1b9a",
-    "rosa":         "#ad1457",
-    "rojo":         "#b71c1c",
-    "naranja":      "#e65100",
-    "marron":       "#4e342e",
-    "gris":         "#37474f",
+    "negro":        (0.17, 0.17, 0.17),
+    "azulmarino":   (0.10, 0.14, 0.49),
+    "azul":         (0.08, 0.39, 0.75),
+    "verdepetroleo":(0.00, 0.38, 0.39),
+    "verde":        (0.18, 0.49, 0.20),
+    "violeta":      (0.42, 0.11, 0.60),
+    "rosa":         (0.68, 0.08, 0.34),
+    "rojo":         (0.72, 0.11, 0.11),
+    "naranja":      (0.90, 0.32, 0.00),
+    "marron":       (0.31, 0.20, 0.18),
+    "gris":         (0.22, 0.28, 0.31),
 }
 
-def build_cv_html(d: dict) -> str:
-    color = COLOR_MAP.get(d.get("color", "negro"), "#2c2c2c")
+def val(d, k):
+    return str(d.get(k, "") or "").strip()
 
-    def val(k, default=""):
-        return str(d.get(k, default) or "").strip()
+def rgb(t):
+    return colors.Color(t[0], t[1], t[2])
 
-    # Experiencias (hasta 3)
-    exp_html = ""
-    for i in range(1, 4):
-        empresa = val(f"exp{i}_empresa")
-        if not empresa:
-            continue
-        exp_html += f"""
-        <div class="cv-entry">
-          <div class="cv-entry-left">
-            <div class="co">{empresa}</div>
-            <div class="ci">{val(f'exp{i}_ciudad')}</div>
-            <div class="pe">{val(f'exp{i}_periodo')}</div>
-          </div>
-          <div class="cv-entry-right">
-            <div class="title-row"><div class="cargo">{val(f'exp{i}_cargo')}</div></div>
-            <div class="desc">{val(f'exp{i}_desc')}</div>
-          </div>
-        </div>"""
+def make_cv_pdf(d: dict) -> bytes:
+    buf = io.BytesIO()
+    W, H = A4  # 595 x 842 pts
 
-    # Educación (hasta 2)
-    edu_html = ""
-    for i in range(1, 3):
-        inst = val(f"edu{i}_inst")
-        if not inst:
-            continue
-        edu_html += f"""
-        <div class="cv-entry">
-          <div class="cv-entry-left">
-            <div class="co">{inst}</div>
-            <div class="ci">{val(f'edu{i}_ciudad')}</div>
-            <div class="pe">{val(f'edu{i}_periodo')}</div>
-          </div>
-          <div class="cv-entry-right">
-            <div class="title-row"><div class="cargo">{val(f'edu{i}_titulo')}</div></div>
-            <div class="desc">{val(f'edu{i}_desc')}</div>
-          </div>
-        </div>"""
+    col_color = COLOR_MAP.get(d.get("color", "negro"), COLOR_MAP["negro"])
+    accent    = rgb(col_color)
 
-    # Habilidades (hasta 6)
-    skills_html = ""
-    skill_pcts = [90, 80, 70, 60, 100, 75]
-    for i in range(1, 7):
-        sk = val(f"skill{i}")
-        if not sk:
-            continue
-        pct = skill_pcts[i-1]
-        skills_html += f"""
-        <div class="skill-item">
-          <div class="sk-name">{sk}</div>
-          <div class="skill-bar-wrap"><div class="skill-bar" style="width:{pct}%"></div></div>
-        </div>"""
+    c = canvas.Canvas(buf, pagesize=A4)
 
-    # Idiomas (hasta 3)
-    idiomas_html = ""
-    lang_pcts = [100, 50, 25]
-    for i in range(1, 4):
-        lang = val(f"idioma{i}")
-        if not lang:
-            continue
-        pct = lang_pcts[i-1]
-        idiomas_html += f"""
-        <div class="lang-item">
-          <div class="lang-name">{lang}</div>
-          <div class="lang-bar-wrap"><div class="lang-bar" style="width:{pct}%"></div></div>
-        </div>"""
+    LEFT_W  = 160   # ancho columna izquierda
+    PAD     = 12    # padding general
+    RIGHT_X = LEFT_W + PAD
 
-    return f"""<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<style>
-* {{ margin:0; padding:0; box-sizing:border-box; }}
-body {{ font-family: Arial, sans-serif; background:#fff; color:#222; }}
-.cv-container {{
-  width: 794px; min-height: 1060px;
-  background:#fff;
-  display: grid; grid-template-columns: 220px 1fr;
-}}
-.cv-left {{ background:{color}; color:#fff; padding:28px 18px; }}
-.photo-circle {{
-  width:90px; height:90px; border-radius:50%;
-  background:rgba(255,255,255,0.15);
-  border:3px solid rgba(255,255,255,0.3);
-  margin:0 auto 18px;
-  display:flex; align-items:center; justify-content:center;
-  font-size:11px; color:rgba(255,255,255,0.6); text-align:center;
-}}
-.cv-left h2 {{
-  font-size:9px; letter-spacing:2px; color:rgba(255,255,255,0.6);
-  text-transform:uppercase; border-bottom:1px solid rgba(255,255,255,0.25);
-  padding-bottom:4px; margin:16px 0 8px;
-}}
-.field-label {{ font-size:9px; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1px; margin-top:8px; }}
-.field-value {{ font-size:11px; color:#ddd; margin-top:2px; padding-bottom:3px; border-bottom:1px dotted rgba(255,255,255,0.2); min-height:16px; }}
-.lang-item {{ margin-bottom:8px; }}
-.lang-name {{ font-size:10px; color:#ccc; text-transform:uppercase; letter-spacing:1px; padding-bottom:2px; }}
-.lang-bar-wrap {{ background:rgba(255,255,255,0.2); height:3px; border-radius:2px; margin-top:4px; }}
-.lang-bar {{ background:#fff; height:3px; border-radius:2px; }}
-.sobre-mi {{ font-size:11px; color:#ddd; line-height:1.5; }}
+    # ── Fondo columna izquierda ──────────────────────────────
+    c.setFillColor(accent)
+    c.rect(0, 0, LEFT_W, H, fill=1, stroke=0)
 
-.cv-right {{ padding:28px 26px; }}
-.cv-name {{ font-size:32px; font-weight:900; color:#222; line-height:1.1; margin-bottom:4px; }}
-.cv-role {{ font-size:13px; color:#666; margin-bottom:14px; }}
-.contact-row {{ display:flex; gap:16px; margin-bottom:18px; flex-wrap:wrap; }}
-.contact-item {{ display:flex; align-items:center; gap:5px; font-size:11px; color:#555; }}
+    # ── Fondo columna derecha ─────────────────────────────────
+    c.setFillColor(colors.white)
+    c.rect(LEFT_W, 0, W - LEFT_W, H, fill=1, stroke=0)
 
-.cv-section {{ margin-bottom:18px; }}
-.cv-section-title {{
-  font-size:10px; font-weight:800; letter-spacing:2px;
-  text-transform:uppercase; color:{color};
-  border-bottom:2px solid {color}; padding-bottom:4px; margin-bottom:12px;
-}}
-.cv-entry {{ display:grid; grid-template-columns:150px 1fr; gap:8px; margin-bottom:12px; }}
-.cv-entry-left {{ font-size:10px; color:#888; }}
-.co {{ font-weight:700; color:#444; font-size:11px; margin-bottom:2px; }}
-.ci, .pe {{ color:#888; font-size:10px; margin-bottom:1px; }}
-.title-row {{ display:flex; align-items:center; gap:6px; margin-bottom:4px; }}
-.title-row::before {{ content:''; width:7px; height:7px; border-radius:50%; background:{color}; flex-shrink:0; }}
-.cargo {{ font-size:12px; font-weight:700; color:#222; }}
-.desc {{ font-size:10px; color:#666; line-height:1.5; margin-left:13px; }}
+    # ── Footer strip ──────────────────────────────────────────
+    FOOTER_H = 18
+    c.setFillColor(colors.Color(0.97, 0.97, 0.97))
+    c.rect(0, 0, W, FOOTER_H, fill=1, stroke=0)
+    c.setFillColor(colors.Color(0.6, 0.6, 0.6))
+    c.setFont("Helvetica", 7)
+    c.drawCentredString(W/2, 6, "🖨  Imprenta Ruiz · Chacabuco 470, Salta · WhatsApp: 387-632-8815")
 
-.skills-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:6px 16px; }}
-.sk-name {{ font-size:10px; color:#555; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; }}
-.skill-bar-wrap {{ background:#eee; height:3px; border-radius:2px; }}
-.skill-bar {{ background:{color}; height:3px; border-radius:2px; }}
+    # ─── COLUMNA IZQUIERDA ────────────────────────────────────
+    y = H - 20
 
-.cv-footer-strip {{
-  grid-column:1/-1; background:#f8f8f8;
-  text-align:center; padding:6px;
-  font-size:9px; color:#aaa; border-top:1px solid #eee;
-}}
-</style>
-</head>
-<body>
-<div class="cv-container">
-  <div class="cv-left">
-    <div class="photo-circle">📷</div>
+    # Icono persona
+    c.setFillColor(colors.Color(1,1,1,0.15))
+    c.circle(LEFT_W/2, y - 40, 38, fill=1, stroke=0)
+    c.setFillColor(colors.Color(1,1,1,0.5))
+    c.setFont("Helvetica", 22)
+    c.drawCentredString(LEFT_W/2, y - 45, "👤")
 
-    <h2>Sobre mí</h2>
-    <div class="sobre-mi">{val('sobre_mi')}</div>
+    y -= 95
 
-    <h2>Datos Personales</h2>
-    <div class="field-label">Fecha de nacimiento</div>
-    <div class="field-value">{val('fecha_nac')}</div>
-    <div class="field-label">Nacionalidad</div>
-    <div class="field-value">{val('nacionalidad')}</div>
-    <div class="field-label">Estado Civil</div>
-    <div class="field-value">{val('estado_civil')}</div>
-    <div class="field-label">CUIL</div>
-    <div class="field-value">{val('cuil')}</div>
+    def left_section(title, cur_y):
+        cur_y -= 8
+        c.setFillColor(colors.Color(1,1,1,0.25))
+        c.rect(PAD, cur_y - 2, LEFT_W - 2*PAD, 0.5, fill=1, stroke=0)
+        cur_y -= 10
+        c.setFillColor(colors.Color(1,1,1,0.55))
+        c.setFont("Helvetica-Bold", 6.5)
+        c.drawString(PAD, cur_y, title.upper())
+        return cur_y - 8
 
-    <h2>Idiomas</h2>
-    {idiomas_html if idiomas_html else '<div class="field-value" style="font-style:italic;color:rgba(255,255,255,0.4)">—</div>'}
+    def left_field(label, value, cur_y):
+        if not value:
+            return cur_y
+        c.setFillColor(colors.Color(1,1,1,0.45))
+        c.setFont("Helvetica", 6)
+        c.drawString(PAD, cur_y, label.upper())
+        cur_y -= 9
+        c.setFillColor(colors.Color(0.9,0.9,0.9))
+        c.setFont("Helvetica", 8)
+        # wrap largo
+        if len(value) > 26:
+            value = value[:26] + "…"
+        c.drawString(PAD, cur_y, value)
+        return cur_y - 11
 
-    <h2>Permiso de Conducir</h2>
-    <div class="field-label">Categoría</div>
-    <div class="field-value">{val('licencia')}</div>
-  </div>
+    # Sobre mí
+    sobre = val(d, "sobre_mi")
+    if sobre:
+        y = left_section("Sobre mí", y)
+        c.setFillColor(colors.Color(0.85, 0.85, 0.85))
+        c.setFont("Helvetica", 7.5)
+        words = sobre.split()
+        line, lines = "", []
+        for w in words:
+            test = (line + " " + w).strip()
+            if c.stringWidth(test, "Helvetica", 7.5) < LEFT_W - 2*PAD:
+                line = test
+            else:
+                lines.append(line); line = w
+        if line: lines.append(line)
+        for ln in lines[:4]:
+            c.drawString(PAD, y, ln); y -= 10
 
-  <div class="cv-right">
-    <div class="cv-name">{val('nombre')}</div>
-    <div class="cv-role">{val('profesion')}</div>
-    <div class="contact-row">
-      <div class="contact-item">📍 {val('ciudad', 'Salta, Argentina')}</div>
-      <div class="contact-item">📞 {val('telefono')}</div>
-      <div class="contact-item">✉️ {val('email')}</div>
-    </div>
+    # Datos personales
+    y = left_section("Datos personales", y)
+    y = left_field("Fecha de nacimiento", val(d, "fecha_nac"), y)
+    y = left_field("Nacionalidad",        val(d, "nacionalidad"), y)
+    y = left_field("Estado civil",        val(d, "estado_civil"), y)
+    y = left_field("CUIL",                val(d, "cuil"), y)
 
-    <div class="cv-section">
-      <div class="cv-section-title">Experiencia Laboral</div>
-      {exp_html if exp_html else '<p style="font-size:11px;color:#aaa;font-style:italic;">—</p>'}
-    </div>
+    # Idiomas
+    langs = [val(d, f"idioma{i}") for i in range(1,4) if val(d, f"idioma{i}")]
+    if langs:
+        y = left_section("Idiomas", y)
+        BAR_WIDTHS = [LEFT_W - 2*PAD, int((LEFT_W-2*PAD)*0.5), int((LEFT_W-2*PAD)*0.25)]
+        for i, lang in enumerate(langs[:3]):
+            c.setFillColor(colors.Color(0.85,0.85,0.85))
+            c.setFont("Helvetica", 8)
+            c.drawString(PAD, y, lang)
+            y -= 8
+            bw = BAR_WIDTHS[i] if i < len(BAR_WIDTHS) else BAR_WIDTHS[-1]
+            c.setFillColor(colors.Color(1,1,1,0.2))
+            c.rect(PAD, y, LEFT_W - 2*PAD, 3, fill=1, stroke=0)
+            c.setFillColor(colors.white)
+            c.rect(PAD, y, bw, 3, fill=1, stroke=0)
+            y -= 9
 
-    <div class="cv-section">
-      <div class="cv-section-title">Educación</div>
-      {edu_html if edu_html else '<p style="font-size:11px;color:#aaa;font-style:italic;">—</p>'}
-    </div>
+    # Licencia
+    lic = val(d, "licencia")
+    if lic:
+        y = left_section("Licencia de conducir", y)
+        y = left_field("Categoría", lic, y)
 
-    <div class="cv-section">
-      <div class="cv-section-title">Habilidades</div>
-      <div class="skills-grid">
-        {skills_html if skills_html else '<p style="font-size:11px;color:#aaa;font-style:italic;">—</p>'}
-      </div>
-    </div>
-  </div>
+    # ─── COLUMNA DERECHA ──────────────────────────────────────
+    y_r = H - 28
+    RX  = RIGHT_X + LEFT_W  # x real en página = LEFT_W + PAD + LEFT_W??? No
+    # La columna derecha empieza en x = LEFT_W + PAD  (=172 pts ~60.7mm)
+    RX  = LEFT_W + PAD
+    RW  = W - RX - PAD      # ancho útil derecha
 
-  <div class="cv-footer-strip">
-    🖨️ Imprenta Ruiz · Chacabuco 470, Salta · WhatsApp: 387-632-8815
-  </div>
-</div>
-</body>
-</html>"""
+    # Nombre y profesión
+    nombre = val(d, "nombre") or "Tu Nombre"
+    prof   = val(d, "profesion")
+
+    c.setFillColor(colors.Color(0.13,0.13,0.13))
+    font_size = 24 if len(nombre) < 20 else 18
+    c.setFont("Helvetica-Bold", font_size)
+    c.drawString(RX, y_r, nombre)
+    y_r -= font_size + 4
+
+    if prof:
+        c.setFillColor(colors.Color(0.45,0.45,0.45))
+        c.setFont("Helvetica", 11)
+        c.drawString(RX, y_r, prof)
+        y_r -= 14
+
+    # Contacto
+    contact_items = []
+    ciudad   = val(d, "ciudad") or "Salta, Argentina"
+    telefono = val(d, "telefono")
+    email    = val(d, "email")
+    if ciudad:   contact_items.append(f"📍 {ciudad}")
+    if telefono: contact_items.append(f"📞 {telefono}")
+    if email:    contact_items.append(f"✉  {email}")
+
+    c.setFillColor(colors.Color(0.4,0.4,0.4))
+    c.setFont("Helvetica", 8)
+    cx = RX
+    for item in contact_items:
+        iw = c.stringWidth(item, "Helvetica", 8)
+        if cx + iw > W - PAD:
+            break
+        c.drawString(cx, y_r, item)
+        cx += iw + 16
+    y_r -= 16
+
+    # Línea separadora
+    c.setStrokeColor(colors.Color(0.88,0.88,0.88))
+    c.line(RX, y_r, W - PAD, y_r)
+    y_r -= 12
+
+    def right_section(title, cur_y):
+        c.setFillColor(accent)
+        c.setFont("Helvetica-Bold", 7.5)
+        c.drawString(RX, cur_y, title.upper())
+        cur_y -= 3
+        c.setStrokeColor(accent)
+        c.setLineWidth(1.5)
+        c.line(RX, cur_y, W - PAD, cur_y)
+        c.setLineWidth(0.5)
+        return cur_y - 10
+
+    def right_entry(empresa, cargo, ciudad_e, periodo, desc, cur_y):
+        if cur_y < FOOTER_H + 20:
+            return cur_y
+        # Bullet
+        c.setFillColor(accent)
+        c.circle(RX + 4, cur_y + 3, 3, fill=1, stroke=0)
+        # Cargo
+        c.setFillColor(colors.Color(0.13,0.13,0.13))
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(RX + 12, cur_y, cargo or "—")
+        cur_y -= 11
+        # Empresa / periodo
+        meta = " · ".join(filter(None, [empresa, ciudad_e, periodo]))
+        if meta:
+            c.setFillColor(colors.Color(0.5,0.5,0.5))
+            c.setFont("Helvetica", 7.5)
+            c.drawString(RX + 12, cur_y, meta[:70])
+            cur_y -= 10
+        # Descripción
+        if desc:
+            c.setFillColor(colors.Color(0.4,0.4,0.4))
+            c.setFont("Helvetica", 7.5)
+            words = desc.split()
+            line, lines = "", []
+            for w in words:
+                test = (line + " " + w).strip()
+                if c.stringWidth(test, "Helvetica", 7.5) < RW - 16:
+                    line = test
+                else:
+                    lines.append(line); line = w
+            if line: lines.append(line)
+            for ln in lines[:3]:
+                c.drawString(RX + 12, cur_y, ln); cur_y -= 9
+        return cur_y - 6
+
+    # Experiencia
+    exps = [(val(d,f"exp{i}_empresa"), val(d,f"exp{i}_cargo"),
+             val(d,f"exp{i}_ciudad"),  val(d,f"exp{i}_periodo"),
+             val(d,f"exp{i}_desc"))    for i in range(1,4)
+            if val(d,f"exp{i}_empresa") or val(d,f"exp{i}_cargo")]
+    if exps:
+        y_r = right_section("Experiencia Laboral", y_r)
+        for emp, cargo, ciu, per, desc in exps:
+            y_r = right_entry(emp, cargo, ciu, per, desc, y_r)
+        y_r -= 4
+
+    # Educación
+    edus = [(val(d,f"edu{i}_inst"),   val(d,f"edu{i}_titulo"),
+             val(d,f"edu{i}_ciudad"), val(d,f"edu{i}_periodo"),
+             val(d,f"edu{i}_desc"))   for i in range(1,3)
+            if val(d,f"edu{i}_inst") or val(d,f"edu{i}_titulo")]
+    if edus:
+        y_r = right_section("Educación", y_r)
+        for inst, titulo, ciu, per, desc in edus:
+            y_r = right_entry(inst, titulo, ciu, per, desc, y_r)
+        y_r -= 4
+
+    # Habilidades
+    skills = [val(d, f"skill{i}") for i in range(1,7) if val(d, f"skill{i}")]
+    if skills:
+        y_r = right_section("Habilidades", y_r)
+        SKILL_PCTS = [0.9, 0.8, 0.7, 0.6, 1.0, 0.75]
+        col_w = (RW - 8) / 2
+        for idx, sk in enumerate(skills):
+            col_x = RX + (col_w + 8) * (idx % 2)
+            row_y = y_r - (idx // 2) * 20
+            c.setFillColor(colors.Color(0.35,0.35,0.35))
+            c.setFont("Helvetica", 7.5)
+            c.drawString(col_x, row_y, sk.upper()[:22])
+            row_y -= 7
+            # barra fondo
+            c.setFillColor(colors.Color(0.9,0.9,0.9))
+            c.rect(col_x, row_y, col_w - 8, 3, fill=1, stroke=0)
+            # barra relleno
+            c.setFillColor(accent)
+            pct = SKILL_PCTS[idx % len(SKILL_PCTS)]
+            c.rect(col_x, row_y, (col_w - 8) * pct, 3, fill=1, stroke=0)
+        rows = (len(skills) + 1) // 2
+        y_r -= rows * 20 + 4
+
+    c.save()
+    buf.seek(0)
+    return buf.read()
 
 
 @app.route("/")
@@ -231,7 +302,6 @@ def index():
 @app.route("/cv")
 def cv():
     return send_file("static/index.html")
-
 
 @app.route("/ping")
 def ping():
@@ -245,19 +315,22 @@ def generar_cv():
     except Exception:
         return jsonify({"error": "JSON inválido"}), 400
 
-    html_str = build_cv_html(data)
-    pdf_bytes = HTML(string=html_str).write_pdf()
+    try:
+        pdf_bytes = make_cv_pdf(data)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
-    nombre = (data.get("nombre") or "cv").strip().replace(" ", "_")
+    nombre   = (data.get("nombre") or "cv").strip().replace(" ", "_")
     filename = f"CV_{nombre}.pdf"
 
-    # Mandar por WhatsApp si hay credenciales configuradas
+    # Mandar por WhatsApp si hay credenciales
     wpp_enviado = False
     if WPP_API and WPP_TOKEN:
         try:
-            import base64
             pdf_b64 = base64.b64encode(pdf_bytes).decode()
-            combo = data.get("combo", "Sin especificar")
+            combo   = data.get("combo", "Sin especificar")
             caption = (f"📄 *CV nuevo recibido*\n"
                        f"👤 {data.get('nombre','—')}\n"
                        f"💼 {data.get('profesion','—')}\n"
@@ -281,7 +354,6 @@ def generar_cv():
         except Exception as e:
             print(f"Error WPP: {e}")
 
-    # Devolver el PDF al cliente también
     pdf_io = io.BytesIO(pdf_bytes)
     pdf_io.seek(0)
     response = send_file(
