@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador de CV — Imprenta Ruiz</title>
+<meta name="description" content="Completá tus datos, imprimí tu currículum vitae profesional. Servicio de Imprenta Ruiz, Salta.">
+<link rel="manifest" href="__ZAPIA_SITE_URL__/manifest.webmanifest">
+<meta name="theme-color" content="#2c2c2c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CV Ruiz">
+<link rel="apple-touch-icon" href="__ZAPIA_SITE_URL__/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Generador de CV — Imprenta Ruiz">
+<meta property="og:description" content="Completá tus datos e imprimí tu currículum vitae profesional en Imprenta Ruiz, Salta.">
+<meta property="og:image" content="__ZAPIA_SITE_ORIGIN__/_z/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="__ZAPIA_SITE_ORIGIN__/_z/og.png">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f0f0; color: #222; }
+
+/* ===== INSTRUCCIONES ===== */
+.instructions {
+  max-width: 860px; margin: 24px auto 0; padding: 18px 24px;
+  background: #fff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.08);
+}
+.instructions h1 { font-size: 22px; color: #2c2c2c; margin-bottom: 6px; }
+.instructions p { font-size: 13px; color: #555; line-height: 1.6; }
+.steps { display: flex; gap: 16px; margin-top: 14px; flex-wrap: wrap; }
+.step { flex: 1; min-width: 160px; background: #f8f8f8; border-radius: 8px; padding: 12px; text-align: center; }
+.step .num { font-size: 24px; font-weight: 900; color: #2c2c2c; }
+.step .txt { font-size: 12px; color: #555; margin-top: 4px; }
+.print-note {
+  background: #2c2c2c; color: #fff; border-radius: 8px;
+  padding: 12px 18px; margin-top: 14px; font-size: 13px; line-height: 1.6;
+}
+
+/* ===== CV ===== */
+.cv-container {
+  max-width: 860px; margin: 24px auto 40px;
+  background: #fff; box-shadow: 0 4px 20px rgba(0,0,0,.15);
+  display: grid; grid-template-columns: 240px 1fr;
+  min-height: 1060px;
+}
+
+/* Columna izquierda */
+.cv-left {
+  background: #2c2c2c; color: #fff; padding: 30px 20px;
+}
+.photo-circle {
+  width: 110px; height: 110px; border-radius: 50%;
+  background: #555; border: 4px solid #444;
+  margin: 0 auto 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #aaa; text-align: center; line-height: 1.4;
+  overflow: hidden;
+}
+.cv-left h2 {
+  font-size: 11px; letter-spacing: 2px; color: #aaa;
+  text-transform: uppercase; border-bottom: 1px solid #555;
+  padding-bottom: 5px; margin: 20px 0 10px;
+}
+.field-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-top: 10px; }
+.field-value {
+  font-size: 12px; color: #ddd; margin-top: 2px;
+  border-bottom: 1px dotted #444; padding-bottom: 4px; min-height: 20px;
+  outline: none;
+}
+.field-value[contenteditable="true"]:empty:before {
+  content: attr(data-placeholder); color: #666; font-style: italic;
+}
+
+.lang-item { margin-bottom: 10px; }
+.lang-name {
+  font-size: 11px; color: #ccc; text-transform: uppercase; letter-spacing: 1px;
+  border-bottom: 1px dotted #444; padding-bottom: 2px; min-height: 18px;
+  outline: none;
+}
+.lang-name[contenteditable="true"]:empty:before { content: "Idioma..."; color: #666; font-style: italic; }
+.lang-bar-wrap { background: #555; height: 4px; border-radius: 2px; margin-top: 5px; }
+.lang-bar { background: #fff; height: 4px; border-radius: 2px; }
+
+/* Columna derecha */
+.cv-right { padding: 32px 30px; }
+.cv-name {
+  font-size: 38px; font-weight: 900; color: #222; line-height: 1.1;
+  border-bottom: 1px dotted #ccc; padding-bottom: 4px; min-height: 48px;
+  outline: none;
+}
+.cv-name[contenteditable="true"]:empty:before { content: "TU NOMBRE\nAPELLIDO"; color: #ccc; font-style: italic; }
+.cv-role {
+  font-size: 14px; color: #666; margin: 6px 0 16px;
+  border-bottom: 1px dotted #ddd; padding-bottom: 4px; min-height: 20px;
+  outline: none;
+}
+.cv-role[contenteditable="true"]:empty:before { content: "Profesión / Puesto"; color: #ccc; font-style: italic; }
+
+.contact-row { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+.contact-item { display: flex; align-items: center; gap: 6px; }
+.contact-item .icon { font-size: 13px; }
+.contact-item .val {
+  font-size: 12px; color: #555; border-bottom: 1px dotted #ccc;
+  min-width: 80px; outline: none; padding-bottom: 2px;
+}
+.contact-item .val[contenteditable="true"]:empty:before { content: attr(data-ph); color: #ccc; font-style: italic; }
+
+.cv-section { margin-bottom: 22px; }
+.cv-section-title {
+  font-size: 12px; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; color: #222;
+  border-bottom: 2.5px solid #2c2c2c; padding-bottom: 5px; margin-bottom: 14px;
+}
+.cv-entry { display: grid; grid-template-columns: 160px 1fr; gap: 10px; margin-bottom: 16px; }
+.cv-entry-left { font-size: 11px; color: #888; }
+.cv-entry-left .co {
+  font-weight: 700; color: #444; font-size: 12px; outline: none;
+  border-bottom: 1px dotted #ddd; min-height: 16px; padding-bottom: 2px;
+}
+.cv-entry-left .co[contenteditable="true"]:empty:before { content: "Empresa/Institución"; color: #ccc; font-style: italic; }
+.cv-entry-left .ci {
+  outline: none; border-bottom: 1px dotted #ddd; min-height: 16px; padding-bottom: 2px; margin-top: 2px;
+}
+.cv-entry-left .ci[contenteditable="true"]:empty:before { content: "Ciudad"; color: #ccc; font-style: italic; }
+.cv-entry-left .pe {
+  outline: none; border-bottom: 1px dotted #ddd; min-height: 16px; padding-bottom: 2px; margin-top: 2px;
+}
+.cv-entry-left .pe[contenteditable="true"]:empty:before { content: "Período"; color: #ccc; font-style: italic; }
+.cv-entry-right .title-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 5px;
+}
+.cv-entry-right .title-row::before {
+  content: ''; width: 8px; height: 8px; border-radius: 50%;
+  background: #2c2c2c; flex-shrink: 0;
+}
+.cv-entry-right .cargo {
+  font-size: 13px; font-weight: 700; color: #222; outline: none;
+  border-bottom: 1px dotted #ccc; flex: 1; min-height: 18px;
+}
+.cv-entry-right .cargo[contenteditable="true"]:empty:before { content: "Cargo / Título"; color: #ccc; font-style: italic; }
+.cv-entry-right .desc {
+  font-size: 11px; color: #666; line-height: 1.6; outline: none;
+  border: 1px dotted #ddd; padding: 4px 6px; border-radius: 3px; min-height: 40px;
+}
+.cv-entry-right .desc[contenteditable="true"]:empty:before { content: "Descripción de tareas y logros..."; color: #ccc; font-style: italic; }
+
+.skills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; }
+.skill-item .sk-name {
+  font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 1px;
+  outline: none; border-bottom: 1px dotted #ddd; min-height: 16px; padding-bottom: 2px;
+}
+.skill-item .sk-name[contenteditable="true"]:empty:before { content: "Habilidad"; color: #ccc; font-style: italic; }
+.skill-bar-wrap { background: #eee; height: 4px; border-radius: 2px; margin-top: 4px; }
+.skill-bar { background: #2c2c2c; height: 4px; border-radius: 2px; }
+
+/* Footer */
+.cv-footer-strip {
+  grid-column: 1 / -1;
+  background: #f8f8f8;
+  text-align: center; padding: 8px;
+  font-size: 10px; color: #aaa;
+  border-top: 1px solid #eee;
+}
+
+/* ===== SELECTOR DE COLOR ===== */
+.color-picker-bar {
+  max-width: 860px; margin: 16px auto 0; padding: 14px 20px;
+  background: #fff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.08);
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.color-picker-bar > span { font-size: 13px; font-weight: 700; color: #333; white-space: nowrap; }
+.color-swatches { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.swatch {
+  width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+  border: 3px solid transparent; transition: transform .15s, box-shadow .15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,.3); display: block;
+}
+.swatch:hover { transform: scale(1.2); }
+input[type=radio]:checked + .swatch {
+  border-color: #fff; box-shadow: 0 0 0 3px #333; transform: scale(1.2);
+}
+
+/* El :checked ~ selector NO alcanza los labels dentro del color-picker-bar
+   porque los inputs están fuera. Usamos :has() para marcar el label activo */
+#c0:checked ~ .color-picker-bar label[for=c0],
+#c1:checked ~ .color-picker-bar label[for=c1],
+#c2:checked ~ .color-picker-bar label[for=c2],
+#c3:checked ~ .color-picker-bar label[for=c3],
+#c4:checked ~ .color-picker-bar label[for=c4],
+#c5:checked ~ .color-picker-bar label[for=c5],
+#c6:checked ~ .color-picker-bar label[for=c6],
+#c7:checked ~ .color-picker-bar label[for=c7],
+#c8:checked ~ .color-picker-bar label[for=c8],
+#c9:checked ~ .color-picker-bar label[for=c9],
+#c10:checked ~ .color-picker-bar label[for=c10] {
+  border-color: #fff; box-shadow: 0 0 0 3px #333; transform: scale(1.2);
+}
+
+/* Colores dinámicos via :checked ~ .cv-wrapper */
+/* Negro (default) */
+#c0:checked ~ .cv-wrapper .cv-left { background: #2c2c2c !important; }
+#c0:checked ~ .cv-wrapper .cv-section-title { color: #2c2c2c !important; border-bottom-color: #2c2c2c !important; }
+#c0:checked ~ .cv-wrapper .skill-bar { background: #2c2c2c !important; }
+
+#c1:checked ~ .cv-wrapper .cv-left { background: #1a237e !important; }
+#c1:checked ~ .cv-wrapper .cv-section-title { color: #1a237e !important; border-bottom-color: #1a237e !important; }
+#c1:checked ~ .cv-wrapper .skill-bar { background: #1a237e !important; }
+
+#c2:checked ~ .cv-wrapper .cv-left { background: #1565c0 !important; }
+#c2:checked ~ .cv-wrapper .cv-section-title { color: #1565c0 !important; border-bottom-color: #1565c0 !important; }
+#c2:checked ~ .cv-wrapper .skill-bar { background: #1565c0 !important; }
+
+#c3:checked ~ .cv-wrapper .cv-left { background: #006064 !important; }
+#c3:checked ~ .cv-wrapper .cv-section-title { color: #006064 !important; border-bottom-color: #006064 !important; }
+#c3:checked ~ .cv-wrapper .skill-bar { background: #006064 !important; }
+
+#c4:checked ~ .cv-wrapper .cv-left { background: #2e7d32 !important; }
+#c4:checked ~ .cv-wrapper .cv-section-title { color: #2e7d32 !important; border-bottom-color: #2e7d32 !important; }
+#c4:checked ~ .cv-wrapper .skill-bar { background: #2e7d32 !important; }
+
+#c5:checked ~ .cv-wrapper .cv-left { background: #6a1b9a !important; }
+#c5:checked ~ .cv-wrapper .cv-section-title { color: #6a1b9a !important; border-bottom-color: #6a1b9a !important; }
+#c5:checked ~ .cv-wrapper .skill-bar { background: #6a1b9a !important; }
+
+#c6:checked ~ .cv-wrapper .cv-left { background: #ad1457 !important; }
+#c6:checked ~ .cv-wrapper .cv-section-title { color: #ad1457 !important; border-bottom-color: #ad1457 !important; }
+#c6:checked ~ .cv-wrapper .skill-bar { background: #ad1457 !important; }
+
+#c7:checked ~ .cv-wrapper .cv-left { background: #b71c1c !important; }
+#c7:checked ~ .cv-wrapper .cv-section-title { color: #b71c1c !important; border-bottom-color: #b71c1c !important; }
+#c7:checked ~ .cv-wrapper .skill-bar { background: #b71c1c !important; }
+
+#c8:checked ~ .cv-wrapper .cv-left { background: #e65100 !important; }
+#c8:checked ~ .cv-wrapper .cv-section-title { color: #e65100 !important; border-bottom-color: #e65100 !important; }
+#c8:checked ~ .cv-wrapper .skill-bar { background: #e65100 !important; }
+
+#c9:checked ~ .cv-wrapper .cv-left { background: #4e342e !important; }
+#c9:checked ~ .cv-wrapper .cv-section-title { color: #4e342e !important; border-bottom-color: #4e342e !important; }
+#c9:checked ~ .cv-wrapper .skill-bar { background: #4e342e !important; }
+
+#c10:checked ~ .cv-wrapper .cv-left { background: #37474f !important; }
+#c10:checked ~ .cv-wrapper .cv-section-title { color: #37474f !important; border-bottom-color: #37474f !important; }
+#c10:checked ~ .cv-wrapper .skill-bar { background: #37474f !important; }
+
+/* ===== COMBOS ===== */
+.combos-section {
+  max-width: 860px; margin: 0 auto 40px; padding: 24px 20px;
+  background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.1);
+}
+.combos-section h2 { font-size: 20px; color: #2c2c2c; margin-bottom: 6px; }
+.combos-section > p { font-size: 13px; color: #666; margin-bottom: 20px; }
+.combos-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;
+}
+.combo-card {
+  border: 2px solid #eee; border-radius: 12px; padding: 18px 14px;
+  text-align: center; position: relative; transition: box-shadow .2s;
+}
+.combo-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+.combo-destacado { border-color: #1a237e; background: #f5f7ff; }
+.combo-badge {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  background: #1a237e; color: #fff; font-size: 10px; font-weight: 800;
+  padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+}
+.combo-titulo { font-size: 14px; font-weight: 700; color: #222; margin-bottom: 8px; }
+.combo-precio { font-size: 28px; font-weight: 900; color: #1a237e; margin-bottom: 10px; }
+.combo-detalle { list-style: none; margin-bottom: 14px; text-align: left; }
+.combo-detalle li { font-size: 12px; color: #555; padding: 3px 0; }
+.combo-detalle li::before { content: "✓ "; color: #2e7d32; font-weight: 700; }
+.combo-btn {
+  display: block; background: #25D366; color: #fff; font-weight: 700;
+  font-size: 13px; padding: 10px 12px; border-radius: 8px;
+  text-decoration: none; transition: background .2s;
+}
+.combo-btn:hover { background: #1da851; }
+
+/* ===== PRINT ===== */
+@media print {
+  .instructions, .no-print { display: none !important; }
+  body { background: #fff; }
+  .cv-container { box-shadow: none; margin: 0; max-width: 100%; page-break-inside: avoid; }
+  .field-value, .lang-name, .cv-name, .cv-role, .contact-item .val,
+  .cv-entry-left .co, .cv-entry-left .ci, .cv-entry-left .pe,
+  .cv-entry-right .cargo, .cv-entry-right .desc, .skill-item .sk-name {
+    border: none !important; outline: none !important;
+  }
+  [contenteditable="true"]:empty { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- INSTRUCCIONES -->
+<div class="instructions no-print">
+  <h1>🖨️ Generador de CV — Imprenta Ruiz</h1>
+  <p>Hacé clic en cualquier campo del CV y escribí tus datos. Cuando termines, imprimí directamente desde el navegador.</p>
+  <div class="steps">
+    <div class="step"><div class="num">1</div><div class="txt">Hacé clic en un campo y escribí tus datos</div></div>
+    <div class="step"><div class="num">2</div><div class="txt">Completá todos los campos del CV</div></div>
+    <div class="step"><div class="num">3</div><div class="txt">Presioná Ctrl+P (o ⌘+P en Mac) para imprimir</div></div>
+  </div>
+  <div class="print-note">
+    💡 <strong>Tip:</strong> Podés cambiar el nombre, experiencia, habilidades y más haciendo clic directamente sobre el CV. Los campos con línea punteada son editables. Cuando imprimás, las líneas no aparecen.
+  </div>
+</div>
+
+<!-- SELECTOR DE COLOR (CSS puro - radio buttons) -->
+<input type="radio" name="cvcolor" id="c0" value="negro" checked hidden>
+<input type="radio" name="cvcolor" id="c1" value="azulmarino" hidden>
+<input type="radio" name="cvcolor" id="c2" value="azul" hidden>
+<input type="radio" name="cvcolor" id="c3" value="verdepetroleo" hidden>
+<input type="radio" name="cvcolor" id="c4" value="verde" hidden>
+<input type="radio" name="cvcolor" id="c5" value="violeta" hidden>
+<input type="radio" name="cvcolor" id="c6" value="rosa" hidden>
+<input type="radio" name="cvcolor" id="c7" value="rojo" hidden>
+<input type="radio" name="cvcolor" id="c8" value="naranja" hidden>
+<input type="radio" name="cvcolor" id="c9" value="marron" hidden>
+<input type="radio" name="cvcolor" id="c10" value="gris" hidden>
+
+<div class="color-picker-bar no-print">
+  <span>🎨 Color del CV:</span>
+  <div class="color-swatches">
+    <label for="c0" class="swatch" style="background:#2c2c2c" title="Negro clásico"></label>
+    <label for="c1" class="swatch" style="background:#1a237e" title="Azul marino"></label>
+    <label for="c2" class="swatch" style="background:#1565c0" title="Azul profesional"></label>
+    <label for="c3" class="swatch" style="background:#006064" title="Verde petróleo"></label>
+    <label for="c4" class="swatch" style="background:#2e7d32" title="Verde"></label>
+    <label for="c5" class="swatch" style="background:#6a1b9a" title="Violeta"></label>
+    <label for="c6" class="swatch" style="background:#ad1457" title="Rosa oscuro"></label>
+    <label for="c7" class="swatch" style="background:#b71c1c" title="Rojo"></label>
+    <label for="c8" class="swatch" style="background:#e65100" title="Naranja"></label>
+    <label for="c9" class="swatch" style="background:#4e342e" title="Marrón"></label>
+    <label for="c10" class="swatch" style="background:#37474f" title="Gris azulado"></label>
+  </div>
+</div>
+
+<!-- CV -->
+<div class="cv-wrapper">
+<div class="cv-container" id="cvContainer">
+
+  <!-- COLUMNA IZQUIERDA -->
+  <div class="cv-left">
+
+    <div class="photo-circle">📷<br><small>Tu foto</small></div>
+
+    <h2>Sobre mí</h2>
+    <div class="field-value" contenteditable="true" data-placeholder="Breve descripción personal y profesional...">
+    </div>
+
+    <h2>Datos Personales</h2>
+    <div class="field-label">Fecha de nacimiento</div>
+    <div class="field-value" contenteditable="true" data-placeholder="Ej: 15 de marzo de 1995"></div>
+    <div class="field-label">Nacionalidad</div>
+    <div class="field-value" contenteditable="true" data-placeholder="Ej: Argentina"></div>
+    <div class="field-label">Estado Civil</div>
+    <div class="field-value" contenteditable="true" data-placeholder="Ej: Soltero/a"></div>
+    <div class="field-label">CUIL</div>
+    <div class="field-value" contenteditable="true" data-placeholder="Ej: 20-32456789-4"></div>
+
+    <h2>Idiomas</h2>
+    <div class="lang-item">
+      <div class="lang-name" contenteditable="true">Español</div>
+      <div class="lang-bar-wrap"><div class="lang-bar" style="width:100%"></div></div>
+    </div>
+    <div class="lang-item">
+      <div class="lang-name" contenteditable="true">Inglés</div>
+      <div class="lang-bar-wrap"><div class="lang-bar" style="width:50%"></div></div>
+    </div>
+    <div class="lang-item">
+      <div class="lang-name" contenteditable="true"></div>
+      <div class="lang-bar-wrap"><div class="lang-bar" style="width:25%"></div></div>
+    </div>
+
+    <h2>Permiso de Conducir</h2>
+    <div class="field-label">Categoría</div>
+    <div class="field-value" contenteditable="true" data-placeholder="Ej: B — Vehículo Ligero"></div>
+
+  </div>
+
+  <!-- COLUMNA DERECHA -->
+  <div class="cv-right">
+
+    <div class="cv-name" contenteditable="true"></div>
+    <div class="cv-role" contenteditable="true"></div>
+
+    <div class="contact-row">
+      <div class="contact-item">
+        <span class="icon">📍</span>
+        <span class="val" contenteditable="true" data-ph="Salta, Argentina"></span>
+      </div>
+      <div class="contact-item">
+        <span class="icon">📞</span>
+        <span class="val" contenteditable="true" data-ph="387-000-0000"></span>
+      </div>
+      <div class="contact-item">
+        <span class="icon">✉️</span>
+        <span class="val" contenteditable="true" data-ph="correo@email.com"></span>
+      </div>
+    </div>
+
+    <!-- EXPERIENCIA -->
+    <div class="cv-section">
+      <div class="cv-section-title">Experiencia Laboral</div>
+
+      <div class="cv-entry">
+        <div class="cv-entry-left">
+          <div class="co" contenteditable="true"></div>
+          <div class="ci" contenteditable="true"></div>
+          <div class="pe" contenteditable="true"></div>
+        </div>
+        <div class="cv-entry-right">
+          <div class="title-row"><div class="cargo" contenteditable="true"></div></div>
+          <div class="desc" contenteditable="true"></div>
+        </div>
+      </div>
+
+      <div class="cv-entry">
+        <div class="cv-entry-left">
+          <div class="co" contenteditable="true"></div>
+          <div class="ci" contenteditable="true"></div>
+          <div class="pe" contenteditable="true"></div>
+        </div>
+        <div class="cv-entry-right">
+          <div class="title-row"><div class="cargo" contenteditable="true"></div></div>
+          <div class="desc" contenteditable="true"></div>
+        </div>
+      </div>
+
+      <div class="cv-entry">
+        <div class="cv-entry-left">
+          <div class="co" contenteditable="true"></div>
+          <div class="ci" contenteditable="true"></div>
+          <div class="pe" contenteditable="true"></div>
+        </div>
+        <div class="cv-entry-right">
+          <div class="title-row"><div class="cargo" contenteditable="true"></div></div>
+          <div class="desc" contenteditable="true"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDUCACIÓN -->
+    <div class="cv-section">
+      <div class="cv-section-title">Educación</div>
+
+      <div class="cv-entry">
+        <div class="cv-entry-left">
+          <div class="co" contenteditable="true"></div>
+          <div class="ci" contenteditable="true"></div>
+          <div class="pe" contenteditable="true"></div>
+        </div>
+        <div class="cv-entry-right">
+          <div class="title-row"><div class="cargo" contenteditable="true"></div></div>
+          <div class="desc" contenteditable="true"></div>
+        </div>
+      </div>
+
+      <div class="cv-entry">
+        <div class="cv-entry-left">
+          <div class="co" contenteditable="true"></div>
+          <div class="ci" contenteditable="true"></div>
+          <div class="pe" contenteditable="true"></div>
+        </div>
+        <div class="cv-entry-right">
+          <div class="title-row"><div class="cargo" contenteditable="true"></div></div>
+          <div class="desc" contenteditable="true"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HABILIDADES -->
+    <div class="cv-section">
+      <div class="cv-section-title">Habilidades</div>
+      <div class="skills-grid">
+        <div class="skill-item">
+          <div class="sk-name" contenteditable="true"></div>
+          <div class="skill-bar-wrap"><div class="skill-bar" style="width:90%"></div></div>
+        </div>
+        <div class="skill-item">
+          <div class="sk-name" contenteditable="true"></div>
+          <div class="skill-bar-wrap"><div class="skill-bar" style="width:80%"></div></div>
+        </div>
+        <div class="skill-item">
+          <div class="sk-name" contenteditable="true"></div>
+          <div class="skill-bar-wrap"><div class="skill-bar" style="width:70%"></div></div>
+        </div>
+        <div class="skill-item">
+          <div class="sk-name" contenteditable="true"></div>
+          <div class="skill-bar-wrap"><div class="skill-bar" style="width:60%"></div></div>
+        </div>
+        <div class="skill-item">
+          <div class="sk-name" contenteditable="true"></div>
+          <div class="skill-bar-wrap"><div class="skill-bar" style="width:100%"></div></div>
+        </div>
+        <div class="skill-item">
+          <div class="sk-name" contenteditable="true"></div>
+          <div class="skill-bar-wrap"><div class="skill-bar" style="width:75%"></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="cv-footer-strip no-print">
+    🖨️ Imprenta Ruiz · Chacabuco 470, Salta · WhatsApp: 387-632-8815
+  </div>
+
+</div>
+</div><!-- /cv-wrapper -->
+
+<!-- BOTÓN ENVIAR A IMPRENTA -->
+<div class="combos-section no-print" id="seccion-enviar" style="background:linear-gradient(135deg,#1a237e,#283593);color:#fff;text-align:center;">
+  <h2 style="color:#fff;font-size:22px;margin-bottom:8px;">📤 ¿Listo el CV?</h2>
+  <p style="color:rgba(255,255,255,0.8);margin-bottom:20px;">Elegí el combo, tocá el botón y el PDF llega directo a Imprenta Ruiz</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px;">
+    <label style="cursor:pointer;">
+      <input type="radio" name="combo-elegido" value="Solo Diseño — $3.000" style="display:none;">
+      <div class="combo-sel-btn" onclick="selCombo(this,'Solo Diseño — $3.000')">✏️ Solo Diseño<br><strong>$3.000</strong></div>
+    </label>
+    <label style="cursor:pointer;">
+      <input type="radio" name="combo-elegido" value="Diseño + 1 Color — $3.900" style="display:none;">
+      <div class="combo-sel-btn combo-sel-active" id="combo-default" onclick="selCombo(this,'Diseño + 1 Color — $3.900')">🖨️ + 1 Color<br><strong>$3.900 ⭐</strong></div>
+    </label>
+    <label style="cursor:pointer;">
+      <input type="radio" name="combo-elegido" value="Diseño + 1 B&N — $3.500" style="display:none;">
+      <div class="combo-sel-btn" onclick="selCombo(this,'Diseño + 1 B&N — $3.500')">🖨️ + 1 B&N<br><strong>$3.500</strong></div>
+    </label>
+    <label style="cursor:pointer;">
+      <input type="radio" name="combo-elegido" value="Diseño + 2 Color — $4.800" style="display:none;">
+      <div class="combo-sel-btn" onclick="selCombo(this,'Diseño + 2 Color — $4.800')">🖨️ + 2 Color<br><strong>$4.800</strong></div>
+    </label>
+  </div>
+
+  <button onclick="enviarImprenta()" id="btn-enviar-pdf" style="
+    background:#fcbf49;color:#1a237e;font-size:18px;font-weight:900;
+    border:none;padding:16px 40px;border-radius:14px;cursor:pointer;
+    box-shadow:0 6px 20px rgba(0,0,0,0.3);width:100%;max-width:400px;">
+    📄 Enviar PDF a Imprenta Ruiz
+  </button>
+  <p id="estado-envio" style="margin-top:12px;font-size:13px;color:rgba(255,255,255,0.8);min-height:20px;"></p>
+</div>
+
+<style>
+.combo-sel-btn {
+  background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.3);
+  border-radius:12px;padding:12px 8px;font-size:13px;color:#fff;
+  transition:all .15s;
+}
+.combo-sel-active {
+  background:rgba(255,255,255,0.25)!important;
+  border-color:#fcbf49!important;
+  box-shadow:0 0 0 2px #fcbf49;
+}
+</style>
+
+<script>
+var comboActual = "Diseño + 1 Color — $3.900";
+function selCombo(el, val) {
+  document.querySelectorAll('.combo-sel-btn').forEach(b => b.classList.remove('combo-sel-active'));
+  el.classList.add('combo-sel-active');
+  comboActual = val;
+}
+
+function getColor() {
+  var names = ["negro","azulmarino","azul","verdepetroleo","verde","violeta","rosa","rojo","naranja","marron","gris"];
+  for(var i=0;i<=10;i++){
+    var r = document.getElementById('c'+i);
+    if(r && r.checked) return names[i];
+  }
+  return "negro";
+}
+
+function txt(sel) {
+  var el = document.querySelector(sel);
+  return el ? (el.textContent||el.innerText||"").trim() : "";
+}
+
+function enviarImprenta() {
+  var btn = document.getElementById('btn-enviar-pdf');
+  var estado = document.getElementById('estado-envio');
+  btn.disabled = true;
+  btn.textContent = "⏳ Generando PDF...";
+  estado.textContent = "";
+
+  var datos = {
+    color: getColor(),
+    combo: comboActual,
+    nombre: txt('.cv-name'),
+    profesion: txt('.cv-role'),
+    ciudad: txt('.contact-item:nth-child(1) .val') || txt('.contact-item:first-child'),
+    telefono: txt('.contact-item:nth-child(2) .val') || txt('.contact-item:nth-child(2)'),
+    email: txt('.contact-item:nth-child(3) .val') || txt('.contact-item:nth-child(3)'),
+    sobre_mi: txt('.sobre-mi'),
+    fecha_nac: txt('.field-value:nth-of-type(1)'),
+    nacionalidad: txt('.field-value:nth-of-type(2)'),
+    estado_civil: txt('.field-value:nth-of-type(3)'),
+    cuil: txt('.field-value:nth-of-type(4)'),
+    licencia: txt('.field-value:nth-of-type(5)'),
+  };
+
+  // Experiencias
+  var exps = document.querySelectorAll('.cv-entry');
+  var expCount = 0;
+  exps.forEach(function(e) {
+    var co = e.querySelector('.co'), cargo = e.querySelector('.cargo');
+    if(co && cargo) {
+      expCount++;
+      var i = expCount;
+      datos['exp'+i+'_empresa'] = (co.textContent||"").trim();
+      datos['exp'+i+'_cargo']   = (cargo.textContent||"").trim();
+      datos['exp'+i+'_ciudad']  = ((e.querySelector('.ci')||{}).textContent||"").trim();
+      datos['exp'+i+'_periodo'] = ((e.querySelector('.pe')||{}).textContent||"").trim();
+      datos['exp'+i+'_desc']    = ((e.querySelector('.desc')||{}).textContent||"").trim();
+    }
+  });
+
+  // Habilidades
+  var skills = document.querySelectorAll('.sk-name');
+  skills.forEach(function(s,i){ datos['skill'+(i+1)] = (s.textContent||"").trim(); });
+
+  // Idiomas
+  var langs = document.querySelectorAll('.lang-name');
+  langs.forEach(function(l,i){ datos['idioma'+(i+1)] = (l.textContent||"").trim(); });
+
+  fetch('https://cv-pdf-server.onrender.com/generar-cv', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(datos)
+  })
+  .then(function(r){
+    if(!r.ok) throw new Error('Error '+r.status);
+    var wpp = r.headers.get('X-WPP-Enviado');
+    return r.blob().then(function(blob){ return {blob:blob, wpp:wpp}; });
+  })
+  .then(function(res){
+    // Descargar PDF en el cliente también
+    var url = URL.createObjectURL(res.blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'CV_' + (datos.nombre||'cv').replace(/ /g,'_') + '.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
+
+    btn.textContent = "✅ ¡PDF enviado!";
+    btn.style.background = "#4caf50";
+    btn.style.color = "#fff";
+    estado.innerHTML = "✅ PDF generado y enviado a Imprenta Ruiz por WhatsApp.<br>También se descargó en tu dispositivo.";
+  })
+  .catch(function(err){
+    btn.disabled = false;
+    btn.textContent = "📄 Enviar PDF a Imprenta Ruiz";
+    estado.textContent = "❌ Error al generar el PDF. Intentá de nuevo en unos segundos.";
+    console.error(err);
+  });
+}
+</script>
+
+</body>
+</html>
