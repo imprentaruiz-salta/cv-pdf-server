@@ -1,6 +1,13 @@
-import os, io, json, requests, base64
+import os, io, json, requests, base64, time, uuid
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
+from collections import deque
+import threading
+
+# Cola de CVs pendientes de notificación
+# Estructura: {"id": ..., "ts": ..., "datos": ..., "pdf_b64": ..., "notificado": False}
+_cv_lock  = threading.Lock()
+_cv_queue = deque(maxlen=50)   # últimos 50 CVs
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -325,34 +332,23 @@ def generar_cv():
     nombre   = (data.get("nombre") or "cv").strip().replace(" ", "_")
     filename = f"CV_{nombre}.pdf"
 
-    # Mandar por WhatsApp si hay credenciales
-    wpp_enviado = False
-    if WPP_API and WPP_TOKEN:
-        try:
-            pdf_b64 = base64.b64encode(pdf_bytes).decode()
-            combo   = data.get("combo", "Sin especificar")
-            caption = (f"📄 *CV nuevo recibido*\n"
-                       f"👤 {data.get('nombre','—')}\n"
-                       f"💼 {data.get('profesion','—')}\n"
-                       f"📲 {data.get('telefono','—')}\n"
-                       f"🎨 Color: {data.get('color','negro')}\n"
-                       f"📦 Combo: {combo}")
-            payload = {
-                "jid": IMPRENTA_JID,
-                "type": "document",
-                "data": pdf_b64,
-                "filename": filename,
-                "caption": caption,
-            }
-            r = requests.post(
-                f"{WPP_API}/send-document",
-                json=payload,
-                headers={"Authorization": f"Bearer {WPP_TOKEN}"},
-                timeout=30,
-            )
-            wpp_enviado = r.status_code == 200
-        except Exception as e:
-            print(f"Error WPP: {e}")
+    # Guardar en cola para notificacion WhatsApp
+    pdf_b64 = base64.b64encode(pdf_bytes).decode()
+    entry = {
+        "id":        str(uuid.uuid4())[:8],
+        "ts":        int(time.time()),
+        "nombre":    data.get("nombre", "\u2014"),
+        "profesion": data.get("profesion", "\u2014"),
+        "telefono":  data.get("telefono", "\u2014"),
+        "color":     data.get("color", "negro"),
+        "combo":     data.get("combo", "Sin especificar"),
+        "pdf_b64":   pdf_b64,
+        "filename":  filename,
+        "notificado": False,
+    }
+    with _cv_lock:
+        _cv_queue.append(entry)
+    print(f"CV en cola: id={entry['id']} nombre={entry['nombre']}")
 
     pdf_io = io.BytesIO(pdf_bytes)
     pdf_io.seek(0)
@@ -362,9 +358,50 @@ def generar_cv():
         as_attachment=True,
         download_name=filename,
     )
-    response.headers["X-WPP-Enviado"] = "si" if wpp_enviado else "no"
+    response.headers["X-CV-ID"] = entry["id"]
+    response.headers["X-WPP-Enviado"] = "pendiente"
     return response
 
+
+@app.route("/cv-pendientes", methods=["GET"])
+def cv_pendientes():
+    secret = os.environ.get("POLL_SECRET", "ruiz2024")
+    if request.args.get("secret") != secret:
+        return jsonify({"error": "unauthorized"}), 401
+    with _cv_lock:
+        pendientes = [
+            {"id":e["id"],"ts":e["ts"],"nombre":e["nombre"],"profesion":e["profesion"],
+             "telefono":e["telefono"],"color":e["color"],"combo":e["combo"],"filename":e["filename"]}
+            for e in _cv_queue if not e["notificado"]
+        ]
+    return jsonify({"pendientes": pendientes})
+
+
+@app.route("/cv-pdf/<cv_id>", methods=["GET"])
+def cv_pdf_by_id(cv_id):
+    secret = os.environ.get("POLL_SECRET", "ruiz2024")
+    if request.args.get("secret") != secret:
+        return jsonify({"error": "unauthorized"}), 401
+    with _cv_lock:
+        entry = next((e for e in _cv_queue if e["id"] == cv_id), None)
+    if not entry:
+        return jsonify({"error": "not found"}), 404
+    pdf_io = io.BytesIO(base64.b64decode(entry["pdf_b64"]))
+    return send_file(pdf_io, mimetype="application/pdf",
+                     as_attachment=True, download_name=entry["filename"])
+
+
+@app.route("/cv-marcar/<cv_id>", methods=["POST"])
+def cv_marcar_notificado(cv_id):
+    secret = os.environ.get("POLL_SECRET", "ruiz2024")
+    if request.args.get("secret") != secret:
+        return jsonify({"error": "unauthorized"}), 401
+    with _cv_lock:
+        for e in _cv_queue:
+            if e["id"] == cv_id:
+                e["notificado"] = True
+                return jsonify({"ok": True})
+    return jsonify({"error": "not found"}), 404
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
